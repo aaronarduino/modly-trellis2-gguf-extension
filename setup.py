@@ -75,6 +75,20 @@ def _python(venv: Path) -> Path:
     return venv / ("Scripts/python.exe" if is_win else "bin/python")
 
 
+def _upgrade_pip(venv: Path) -> None:
+    """Upgrade pip inside the venv.
+
+    Uses ``python -m pip`` rather than the pip shim so the upgrade works even
+    when the ``pip`` executable is stale or missing (fresh venvs, Windows).
+    """
+    print("[setup] Upgrading pip …")
+    subprocess.run(
+        [str(_python(venv)), "-m", "pip", "install", "--upgrade", "pip"],
+        check=True,
+    )
+    print("[setup] pip upgraded.")
+
+
 def _site_packages(venv: Path) -> Path:
     exe = _python(venv)
     out = subprocess.check_output(
@@ -628,6 +642,9 @@ def setup(python_exe: str, ext_dir: Path, gpu_sm: int, cuda_version: int = 0) ->
     else:
         print(f"[setup] Creating venv at {venv} …")
         subprocess.run([python_exe, "-m", "venv", str(venv)], check=True)
+
+    # ── Upgrade pip before installing anything ────────────────────────── #
+    _upgrade_pip(venv)
 
     # ── PyTorch — select build based on GPU architecture / CUDA driver ── #
     # Note: cuda_version reflects the installed driver/toolkit, not the GPU
